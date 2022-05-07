@@ -14,6 +14,9 @@ import Login from './Login';
 import Register from './Register';
 import ProtectedRoute from './ProtectedRoute';
 import * as mestoAuth from './mestoAuth';
+import InfoTooltip from './InfoTooltip';
+import errImg from '../images/wrong-register.svg';
+import accessImg from '../images/accept-register.svg';
 
 function App() {
 
@@ -39,6 +42,7 @@ function App() {
   const [isAddPlacePopupOpen, setAddPlacePopupOpen] = React.useState(false);
   const [isEditAvatarPopupOpen, setEditAvatarPopupOpen] = React.useState(false);
   const [isImagePopupOpen, setImagePopupOpen] = React.useState(false);
+  const [isInfoToolOpen, setInfoTool] = React.useState(false);
 
   // Функция обработчик клика по карточке места
   function handleCardClick(element) {
@@ -65,6 +69,7 @@ function App() {
     setEditProfilePopupOpen(false);
     setAddPlacePopupOpen(false);
     setImagePopupOpen(false);
+    setInfoTool(false);
     setSelectedCard({});
   }
 
@@ -147,31 +152,38 @@ function App() {
     return mestoAuth
       .authorize(email,password)
       .then((data) => {
-        localStorage.setItem('jwt', data.jwt);
-        if(tokenCheck) {
-          setLoggedIn(true);
-          history.push("/"); 
+        if(!data.token){
+          setInfoTool(true);
         }
+        console.log('data: ', data);
+        localStorage.setItem('jwt', data.token);
+        setLoggedIn(true);
+      })
+      .catch((err) => {
+        console.log(err);
+        setInfoTool(true);
       })
   }
 
   function handleRegister (email, password) {
     return mestoAuth
       .register(email, password)
-      .then(() => {
-        history.push("/sign-in")
+      .then(() => { 
+        setInfoTool(true)
+      })
+      .catch((err) => {
+        console.log(err);
       })
   }
 
   function tokenCheck() {
     if(localStorage.getItem('jwt')) {
-      let jwt = localStorage.getItem('jwt');
+    let jwt = localStorage.getItem('jwt');  
       mestoAuth.getContent(jwt).then((res) => {
         if(res){
-          console.log(res);
+          console.log('tokenCheck: ', res);
           setUserData({
-            email: res.email,
-            password: res.password,
+            email: res.data.email,
           });
           setLoggedIn(true);
         }
@@ -182,14 +194,16 @@ function App() {
   function handleSignOut () {
     localStorage.removeItem('jwt');
     setLoggedIn(false);
-    history.push("/");
+    history.push("/sign-in");
   }
 
   //Запросы данных пользователя и карточек с сервера и проверка токена
   React.useEffect(() => {
     tokenCheck();
+  }, []);
+
+  React.useEffect(() => {
     if(loggedIn) {
-      history.push("/");
       api.getProfile()
       .then(res => {
         setCurrentUser(res);
@@ -205,9 +219,10 @@ function App() {
       .catch( res => {
         console.log(res);
       })
+      history.push("/");
       return;
     }
-  }, []);
+  }, [loggedIn, history])
 
   return (
     <div className="App">
@@ -256,9 +271,17 @@ function App() {
                   <Header 
                     userData=''
                   >
-                    <Link to="/sign-up"><p className="user-info__btn">Регистрация</p></Link>
+                    <Link to="/sign-up"><p className="user-info__btn">Зарегестрироваться</p></Link> 
                   </Header>
+                  
                   <Login handleLogin={handleLogin} tokenCheck={tokenCheck} />
+                  <InfoTooltip 
+                    name='err-reg'
+                    title='Что-то пошло не так! Попробуйте ещё раз.'
+                    image={errImg}
+                    isOpen={isInfoToolOpen}
+                    onClose={closeAllPopups}
+                  />
                 </Route>
 
                 <Route path="/sign-up">
@@ -268,6 +291,13 @@ function App() {
                     <Link to="/sign-in"><p className="user-info__btn">Вход</p></Link>
                   </Header>
                   <Register handleRegister={handleRegister} />
+                  <InfoTooltip 
+                    name='accept-reg'
+                    title='Вы успешно зарегестрировались!'
+                    image={accessImg}
+                    isOpen={isInfoToolOpen}
+                    onClose={closeAllPopups}
+                  />
                 </Route>
 
               </Switch>
