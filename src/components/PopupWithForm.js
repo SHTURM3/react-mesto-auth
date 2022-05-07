@@ -7,7 +7,7 @@ function PopupWithForm(props) {
                 <h2 className={`popup__title popup__title_${props.name}`}>
                     {props.title}
                 </h2>
-                <form onSubmit={props.onSubmit} className={`popup__form popup__form_${props.name}`} name={props.name} noValidate>
+                <form onSubmit={props.onSubmit} className={`popup__form popup__form_${props.name}`} name={props.name}>
                     {props.children}
                     <button type="submit" className={`popup__button popup__button_${props.name}`}>{props.button}</button>
                 </form>

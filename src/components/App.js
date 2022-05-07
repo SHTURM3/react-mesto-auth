@@ -1,5 +1,5 @@
 import React from 'react';
-
+import { Route, Switch, useHistory, Link } from 'react-router-dom';
 import api from '../utils/Api';
 import Header from './Header';
 import Main from './Main';
@@ -10,8 +10,20 @@ import AddPlacePopup from './AddPlacePopup';
 import PopupWithForm from './PopupWithForm';
 import ImagePopup from './ImagePopup';
 import CurrentUserContext from '../contexts/CurrentUserContext';
+import Login from './Login';
+import Register from './Register';
+import ProtectedRoute from './ProtectedRoute';
+import * as mestoAuth from './mestoAuth';
 
 function App() {
+
+  //Стейт переменная статуса пользователя
+  const [loggedIn, setLoggedIn] = React.useState(false);
+
+  //Стейт переменная данных о пользователе
+  const [userData, setUserData] = React.useState(null);
+
+  const history = useHistory();
 
   // Стейт переменная информации о пользователе
   const [currentUser, setCurrentUser ] = React.useState({});
@@ -131,9 +143,54 @@ function App() {
       })
   }
 
-  //Запросы данных пользователя и карточек с сервера
+  function handleLogin(email,password){
+    return mestoAuth
+      .authorize(email,password)
+      .then((data) => {
+        localStorage.setItem('jwt', data.jwt);
+        if(tokenCheck) {
+          setLoggedIn(true);
+          history.push("/"); 
+        }
+      })
+  }
+
+  function handleRegister (email, password) {
+    return mestoAuth
+      .register(email, password)
+      .then(() => {
+        history.push("/sign-in")
+      })
+  }
+
+  function tokenCheck() {
+    if(localStorage.getItem('jwt')) {
+      let jwt = localStorage.getItem('jwt');
+      mestoAuth.getContent(jwt).then((res) => {
+        if(res){
+          console.log(res);
+          setUserData({
+            email: res.email,
+            password: res.password,
+          });
+          setLoggedIn(true);
+        }
+      })
+    }
+  }
+
+  function handleSignOut () {
+    localStorage.removeItem('jwt');
+    setLoggedIn(false);
+    history.push("/");
+  }
+
+  //Запросы данных пользователя и карточек с сервера и проверка токена
   React.useEffect(() => {
-    api.getProfile()
+    tokenCheck();
+    if(loggedIn) {
+      history.push("/");
+      api.getProfile()
       .then(res => {
         setCurrentUser(res);
       })
@@ -141,48 +198,81 @@ function App() {
           console.log(res);
       })
     
-    api.getInitialCards()
+      api.getInitialCards()
       .then( res => {
         setCards(res);
       })
       .catch( res => {
         console.log(res);
-      }) 
+      })
+      return;
+    }
   }, []);
 
   return (
     <div className="App">
       <CurrentUserContext.Provider value={currentUser}>
         <div className="page">
-              <Header />
-              <Main 
-                onEditProfile={handleEditProfileClick} 
-                onAddPlace={handleAddPlaceClick} 
-                onEditAvatar={handleEditAvatarClick}
-                cards={cards}
-                onCardClick={handleCardClick}
-                onCardLike={handleCardLike}
-                onCardDelete={handleCardDelete}
-              />
-              <Footer />
+              <Switch>
+                <ProtectedRoute 
+                  exact path="/"
+                  loggedIn={loggedIn}
+                >
+                  <Header 
+                    userData={userData}
+                  >
+                    <button onClick={handleSignOut} className="user-info__btn">Выйти</button>
+                  </Header>
 
-              <EditProfilePopup isOpen={isEditProfilePopupOpen} onClose={closeAllPopups} onUpdateUser={handleUpdateUser} />
+                  <Main 
+                    onEditProfile={handleEditProfileClick} 
+                    onAddPlace={handleAddPlaceClick} 
+                    onEditAvatar={handleEditAvatarClick}
+                    cards={cards}
+                    onCardClick={handleCardClick}
+                    onCardLike={handleCardLike}
+                    onCardDelete={handleCardDelete}
+                  />
+``````````````````<EditProfilePopup isOpen={isEditProfilePopupOpen} onClose={closeAllPopups} onUpdateUser={handleUpdateUser} />
 
-              <EditAvatarPopup isOpen={isEditAvatarPopupOpen} onClose={closeAllPopups} onUpdateAvatar={handleUpdateAvatar} />
+                  <EditAvatarPopup isOpen={isEditAvatarPopupOpen} onClose={closeAllPopups} onUpdateAvatar={handleUpdateAvatar} />
 
-              <AddPlacePopup isOpen={isAddPlacePopupOpen} onClose={closeAllPopups} onAddPlace={handleAddPlaceSubmit} />
+                  <AddPlacePopup isOpen={isAddPlacePopupOpen} onClose={closeAllPopups} onAddPlace={handleAddPlaceSubmit} />
 
-              <PopupWithForm 
-                title='Вы уверены?' 
-                name='question'
-                button='Да' 
-              ></PopupWithForm>
+                  <PopupWithForm 
+                    title='Вы уверены?' 
+                    name='question'
+                    button='Да' 
+                  ></PopupWithForm>
 
-              <ImagePopup
-                card={selectedCard}
-                isOpen={isImagePopupOpen} 
-                onClose={closeAllPopups}
-              />
+                  <ImagePopup
+                    card={selectedCard}
+                    isOpen={isImagePopupOpen} 
+                    onClose={closeAllPopups}
+                  />
+                </ProtectedRoute>
+
+                <Route path="/sign-in">
+                  <Header 
+                    userData=''
+                  >
+                    <Link to="/sign-up"><p className="user-info__btn">Регистрация</p></Link>
+                  </Header>
+                  <Login handleLogin={handleLogin} tokenCheck={tokenCheck} />
+                </Route>
+
+                <Route path="/sign-up">
+                  <Header 
+                    userData=''
+                  >
+                    <Link to="/sign-in"><p className="user-info__btn">Вход</p></Link>
+                  </Header>
+                  <Register handleRegister={handleRegister} />
+                </Route>
+
+              </Switch>
+
+              <Footer />              
         </div>
       </CurrentUserContext.Provider>
     </div>  
