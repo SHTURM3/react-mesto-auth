@@ -162,8 +162,7 @@ function App() {
       .catch((err) => {
         console.log('ErrorReg: ', err);
         setInfotoolTipStatus(false);
-        setInfoTool(true);
-        history.push("/sign-in");      
+        setInfoTool(true);     
       })
   }
 
@@ -266,7 +265,7 @@ function App() {
                   <Header 
                     userData=''
                   >
-                    <Link to="/sign-up"><p className="user-info__btn">Зарегестрироваться</p></Link> 
+                    <Link className="user-info__btn" to="/sign-up">Зарегестрироваться</Link> 
                   </Header>
                   
                   <Login handleLogin={handleLogin} />
@@ -281,9 +280,14 @@ function App() {
                   <Header 
                     userData=''
                   >
-                    <Link to="/sign-in"><p className="user-info__btn">Вход</p></Link>
+                    <Link className="user-info__btn" to="/sign-in">Вход</Link>
                   </Header>
                   <Register handleRegister={handleRegister} />
+                  <InfoTooltip 
+                    status={infotoolTipStatus}
+                    isOpen={isInfoToolOpen}
+                    onClose={closeAllPopups}
+                  />
                 </Route>
               </Switch>
 
