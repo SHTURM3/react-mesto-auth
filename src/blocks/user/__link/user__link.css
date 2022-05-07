@@ -6,4 +6,9 @@
     margin: 15px 0 0;
     text-align: center;
     color: #fff;
+    text-decoration: none;
+}
+
+.user__link:hover {
+    opacity: 0.6;
 }
