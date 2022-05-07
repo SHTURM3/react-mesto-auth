@@ -13,10 +13,8 @@ import CurrentUserContext from '../contexts/CurrentUserContext';
 import Login from './Login';
 import Register from './Register';
 import ProtectedRoute from './ProtectedRoute';
-import * as mestoAuth from './mestoAuth';
+import * as mestoAuth from '../utils/mestoAuth';
 import InfoTooltip from './InfoTooltip';
-import errImg from '../images/wrong-register.svg';
-import accessImg from '../images/accept-register.svg';
 
 function App() {
 
@@ -43,6 +41,7 @@ function App() {
   const [isEditAvatarPopupOpen, setEditAvatarPopupOpen] = React.useState(false);
   const [isImagePopupOpen, setImagePopupOpen] = React.useState(false);
   const [isInfoToolOpen, setInfoTool] = React.useState(false);
+  const [infotoolTipStatus, setInfotoolTipStatus] = React.useState(false);
 
   // Функция обработчик клика по карточке места
   function handleCardClick(element) {
@@ -148,40 +147,52 @@ function App() {
       })
   }
 
+  function handleRegister (email, password) {
+    return mestoAuth
+      .register(email, password)
+      .then((data) => {
+        if(!data.token){
+          setInfotoolTipStatus(false);
+          setInfoTool(true);
+        }
+        setInfotoolTipStatus(true);
+        setInfoTool(true);
+        history.push("/sign-in");
+      })
+      .catch((err) => {
+        console.log('ErrorReg: ', err);
+        setInfotoolTipStatus(false);
+        setInfoTool(true);
+        history.push("/sign-in");      
+      })
+  }
+
   function handleLogin(email,password){
     return mestoAuth
       .authorize(email,password)
       .then((data) => {
         if(!data.token){
+          setInfotoolTipStatus(false);
           setInfoTool(true);
         }
         console.log('data: ', data);
+        setUserData({email});
         localStorage.setItem('jwt', data.token);
         setLoggedIn(true);
       })
       .catch((err) => {
-        console.log(err);
+        console.log('ErrorLog: ', err);
+        setInfotoolTipStatus(false);
         setInfoTool(true);
       })
   }
 
-  function handleRegister (email, password) {
-    return mestoAuth
-      .register(email, password)
-      .then(() => { 
-        setInfoTool(true)
-      })
-      .catch((err) => {
-        console.log(err);
-      })
-  }
-
-  function tokenCheck() {
+  function checkToken() {
     if(localStorage.getItem('jwt')) {
     let jwt = localStorage.getItem('jwt');  
       mestoAuth.getContent(jwt).then((res) => {
         if(res){
-          console.log('tokenCheck: ', res);
+          console.log('checkToken: ', res);
           setUserData({
             email: res.data.email,
           });
@@ -199,7 +210,7 @@ function App() {
 
   //Запросы данных пользователя и карточек с сервера и проверка токена
   React.useEffect(() => {
-    tokenCheck();
+    checkToken();
   }, []);
 
   React.useEffect(() => {
@@ -248,23 +259,7 @@ function App() {
                     onCardLike={handleCardLike}
                     onCardDelete={handleCardDelete}
                   />
-``````````````````<EditProfilePopup isOpen={isEditProfilePopupOpen} onClose={closeAllPopups} onUpdateUser={handleUpdateUser} />
 
-                  <EditAvatarPopup isOpen={isEditAvatarPopupOpen} onClose={closeAllPopups} onUpdateAvatar={handleUpdateAvatar} />
-
-                  <AddPlacePopup isOpen={isAddPlacePopupOpen} onClose={closeAllPopups} onAddPlace={handleAddPlaceSubmit} />
-
-                  <PopupWithForm 
-                    title='Вы уверены?' 
-                    name='question'
-                    button='Да' 
-                  ></PopupWithForm>
-
-                  <ImagePopup
-                    card={selectedCard}
-                    isOpen={isImagePopupOpen} 
-                    onClose={closeAllPopups}
-                  />
                 </ProtectedRoute>
 
                 <Route path="/sign-in">
@@ -274,11 +269,9 @@ function App() {
                     <Link to="/sign-up"><p className="user-info__btn">Зарегестрироваться</p></Link> 
                   </Header>
                   
-                  <Login handleLogin={handleLogin} tokenCheck={tokenCheck} />
+                  <Login handleLogin={handleLogin} />
                   <InfoTooltip 
-                    name='err-reg'
-                    title='Что-то пошло не так! Попробуйте ещё раз.'
-                    image={errImg}
+                    status={infotoolTipStatus}
                     isOpen={isInfoToolOpen}
                     onClose={closeAllPopups}
                   />
@@ -291,16 +284,26 @@ function App() {
                     <Link to="/sign-in"><p className="user-info__btn">Вход</p></Link>
                   </Header>
                   <Register handleRegister={handleRegister} />
-                  <InfoTooltip 
-                    name='accept-reg'
-                    title='Вы успешно зарегестрировались!'
-                    image={accessImg}
-                    isOpen={isInfoToolOpen}
-                    onClose={closeAllPopups}
-                  />
                 </Route>
-
               </Switch>
+
+              <EditProfilePopup isOpen={isEditProfilePopupOpen} onClose={closeAllPopups} onUpdateUser={handleUpdateUser} />
+
+              <EditAvatarPopup isOpen={isEditAvatarPopupOpen} onClose={closeAllPopups} onUpdateAvatar={handleUpdateAvatar} />
+
+              <AddPlacePopup isOpen={isAddPlacePopupOpen} onClose={closeAllPopups} onAddPlace={handleAddPlaceSubmit} />
+
+              <PopupWithForm 
+                  title='Вы уверены?' 
+                  name='question'
+                  button='Да' 
+              ></PopupWithForm>
+
+              <ImagePopup
+                card={selectedCard}
+                isOpen={isImagePopupOpen} 
+                onClose={closeAllPopups}
+              />
 
               <Footer />              
         </div>
@@ -310,3 +313,4 @@ function App() {
 }
 
 export default App;
+
